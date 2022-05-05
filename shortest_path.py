@@ -9,6 +9,8 @@
 """
 
 import math
+import matplotlib.pyplot as plt
+from matplotlib import collections as mpl
 
 class Vertex:
     def __init__(self, x, y):
@@ -55,6 +57,8 @@ def naive_visibility_graph(points, edges, start):
 
     returns the start vertex which connects to the rest of the graph through its arcs
     """
+    # CITE: http://www.science.smith.edu/~istreinu/Teaching/Courses/274/Spring98/Projects/Philip/fp/visibility.htm
+    # Gave me pseudocode for the naive algorithm
     points = [start] + points
     for point in points:
         for other in points:
@@ -75,16 +79,32 @@ def naive_visibility_graph(points, edges, start):
                     point.arcs.append(other)
     return start
 
-def test_arcs(points, start):
+def test_arcs(points, edges, start):
+    """
+    prints arcs of all points to check if the go through an obstacle
+
+    keyword arguments:
+    points -- a list of points in the visibility graph (points on obstacles)
+    edges -- all edges of obstacles
+    start -- the start vertex
+    """
+    # CITE: https://matplotlib.org/3.5.0/gallery/shapes_and_collections/line_collection.html
+    # DESC: Never really used matplotlib too much so here is some line collection documentation that helped me set this up
+    lines = []
+    colors = []
+    for edge in edges:
+        lines.append([edge[0].loc, edge[1].loc])
+        colors.append((1, 0, 0, 1))
     for point in points:
-        print(f"Point: {point}")
-        print("Arcs:")
         for arc in point.arcs:
-            print(arc)
-    print(f"Point: {start}")
-    print("Arcs:")
-    for arc in start.arcs:
-        print(arc)
+            lines.append([point.loc, arc.loc])
+            colors.append((0, 1, 0, 1))
+    graph = mpl.LineCollection(lines, colors=colors, linewidths=2)
+    fig, ax = plt.subplots()
+    ax.set_xlim(-1, 7)
+    ax.set_ylim(-1, 10)
+    ax.add_collection(graph)
+    plt.show()
 
 def main():
     """
@@ -94,6 +114,6 @@ def main():
     edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
     start = Vertex(0, 4)
     naive_visibility_graph(points, edges, start)
-    test_arcs(points, start)
+    test_arcs(points, edges, start)
     
 main()
