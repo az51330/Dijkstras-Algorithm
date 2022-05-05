@@ -61,17 +61,39 @@ def naive_visibility_graph(points, edges, start):
             arc = True
             if point != other:
                 for edge in edges:
-                    if orient(edge[0].loc, edge[1].loc, point.loc) == -1 and orient(edge[0].loc, edge[1].loc, other.loc) == 1:
-                        if orient(edge[0].loc, edge[1].loc, point.loc) == 1 and orient(edge[0].loc, edge[1].loc, other.loc) == -1:
+                    if edge == (point, other) or edge == (other, point):
+                        arc = False
+                    if orient(edge[0].loc, edge[1].loc, point.loc) < 0 and orient(edge[0].loc, edge[1].loc, other.loc) > 0 and orient(point.loc, other.loc, edge[0].loc) < 0 and orient(point.loc, other.loc, edge[1].loc) > 0:
+                            arc = False
+                    elif orient(edge[0].loc, edge[1].loc, point.loc) > 0 and orient(edge[0].loc, edge[1].loc, other.loc) < 0 and orient(point.loc, other.loc, edge[0].loc) < 0 and orient(point.loc, other.loc, edge[1].loc) > 0:
+                            arc = False
+                    elif orient(edge[0].loc, edge[1].loc, point.loc) < 0 and orient(edge[0].loc, edge[1].loc, other.loc) > 0 and orient(point.loc, other.loc, edge[0].loc) > 0 and orient(point.loc, other.loc, edge[1].loc) < 0:
+                            arc = False
+                    elif orient(edge[0].loc, edge[1].loc, point.loc) > 0 and orient(edge[0].loc, edge[1].loc, other.loc) < 0 and orient(point.loc, other.loc, edge[0].loc) > 0 and orient(point.loc, other.loc, edge[1].loc) < 0:
                             arc = False
                 if arc:
-                    point.arc.append(other)
+                    point.arcs.append(other)
     return start
+
+def test_arcs(points, start):
+    for point in points:
+        print(f"Point: {point}")
+        print("Arcs:")
+        for arc in point.arcs:
+            print(arc)
+    print(f"Point: {start}")
+    print("Arcs:")
+    for arc in start.arcs:
+        print(arc)
 
 def main():
     """
     main function of the program
     """
-    print(Vertex(1,1))
-
+    points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
+    edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
+    start = Vertex(0, 4)
+    naive_visibility_graph(points, edges, start)
+    test_arcs(points, start)
+    
 main()
