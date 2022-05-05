@@ -96,6 +96,7 @@ def test_arcs(points, edges, start):
         lines.append([edge[0].loc, edge[1].loc])
         colors.append((1, 0, 0, 1))
     for point in points:
+        # set up x and y mins here to autoset bounds later
         for arc in point.arcs:
             lines.append([point.loc, arc.loc])
             colors.append((0, 1, 0, 1))
