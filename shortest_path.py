@@ -90,20 +90,32 @@ def test_arcs(points, edges, start):
     """
     # CITE: https://matplotlib.org/3.5.0/gallery/shapes_and_collections/line_collection.html
     # DESC: Never really used matplotlib too much so here is some line collection documentation that helped me set this up
+    points.append(start)
     lines = []
     colors = []
     for edge in edges:
         lines.append([edge[0].loc, edge[1].loc])
         colors.append((1, 0, 0, 1))
+    min_x = math.inf
+    max_x = -math.inf
+    min_y = math.inf
+    max_y = -math.inf
     for point in points:
-        # set up x and y mins here to autoset bounds later
+        if point.loc[0] < min_x:
+            min_x = point.loc[0]
+        if point.loc[0] > max_x:
+            max_x = point.loc[0]
+        if point.loc[1] < min_y:
+            min_y = point.loc[1]
+        if point.loc[1] > max_y:
+            max_y = point.loc[1]
         for arc in point.arcs:
             lines.append([point.loc, arc.loc])
             colors.append((0, 1, 0, 1))
     graph = mpl.LineCollection(lines, colors=colors, linewidths=2)
     fig, ax = plt.subplots()
-    ax.set_xlim(-1, 7)
-    ax.set_ylim(-1, 10)
+    ax.set_xlim(min_x - 1, max_x + 1)
+    ax.set_ylim(min_y - 1, max_y + 1)
     ax.add_collection(graph)
     plt.show()
 
