@@ -52,6 +52,109 @@ def orient(p, q, r):
     """
     return q[0] * r[1] + p[0] * q[1] + r[0] * p[1] - q[0] * p[1] - r[0] * q[1] - p[0] * r[1]
 
+def generate_quad(n):
+    """
+    Helper for generate obstacles, generates n^2 obstacles mapping
+
+    keyword arguments:
+    n -- number of vertices
+
+    returns a list of points and edges
+    """
+    bottom = n // 2
+    mid = bottom // 2
+    mid_bottom = Vertex(mid, -(1 / bottom) * mid * (mid - bottom))
+    mid_top = Vertex(mid, (1 / bottom) * mid * (mid - bottom) + bottom)
+    points = [mid_top, mid_bottom]
+    edges = []
+    last_bottom_right = last_bottom_left = points[0]
+    last_top_right = last_top_left = points[1]
+
+    for index in range(mid):
+        new_bottom_right = Vertex(mid + index, -(1 / bottom) * (mid + index) * (mid + index - bottom))
+        points.append(new_bottom_right)
+        edges.append((last_bottom_right, new_bottom_right))
+        last_bottom_right = new_bottom_right
+
+        new_bottom_left = Vertex(mid - index, -(1 / bottom) * (mid - index) * (mid - index - bottom))
+        points.append(new_bottom_left)
+        edges.append((last_bottom_left, new_bottom_left))
+        last_bottom_left = new_bottom_left
+
+        new_top_right = Vertex(mid + index, (1 / bottom) * (mid + index) * (mid + index - bottom) + bottom)
+        points.append(new_top_right)
+        edges.append((last_top_right, new_top_right))
+        last_top_right = new_top_right
+
+        new_top_left = Vertex(mid - index, (1 / bottom) * (mid - index) * (mid - index - bottom) + bottom)
+        points.append(new_top_left)
+        edges.append((last_top_left, new_top_left))
+        last_top_left = new_top_left
+
+    edges.append((last_bottom_left, last_bottom_right))
+    edges.append((last_top_left, last_top_right))
+    edges.append((last_bottom_left, mid_bottom))
+    edges.append((last_bottom_right, mid_bottom))
+    edges.append((last_top_left, mid_top))
+    edges.append((last_top_right, mid_top))
+
+    edges.append((Vertex(mid - .1, -(1 / bottom) * (mid - .1) * (mid - .1 - bottom)), Vertex(mid - .1, 1)))
+    edges.append((Vertex(mid + .1, -(1 / bottom) * (mid + .1) * (mid + .1 - bottom)), Vertex(mid + .1, 1)))
+    edges.append((Vertex(mid - .1, (1 / bottom) * (mid - .1) * (mid - .1 - bottom) + bottom), Vertex(mid - .1, bottom)))
+    edges.append((Vertex(mid + .1, (1 / bottom) * (mid + .1) * (mid + .1 - bottom) + bottom), Vertex(mid + .1, bottom)))
+    
+    edges.append((Vertex(bottom - 1.1, -(1 / bottom) * (bottom - 1.1) * (bottom - 1.1 - bottom)), Vertex(bottom - 1.1, 1)))
+    edges.append((Vertex(1 + .1, -(1 / bottom) * (1 + .1) * (1 + .1 - bottom)), Vertex(1 + .1, 1)))
+    edges.append((Vertex(bottom - 1.1, (1 / bottom) * (bottom - 1.1) * (bottom - 1.1 - bottom) + bottom), Vertex(bottom - 1.1, bottom)))
+    edges.append((Vertex(1 + .1, (1 / bottom) * (1 + .1) * (1 + .1 - bottom) + bottom), Vertex(1 + .1, bottom)))
+
+    return points, edges
+
+def generate_nlogn(n):
+    """
+    Helper for generate obstacles, generates nlogn obstacles mapping
+
+    keyword arguments:
+    n -- number of vertices
+
+    returns a list of points and edges
+    """
+    points = []
+    edges = []
+    min_x_safe = 0
+    min_y_safe = 0
+    while n > 0:
+        first = last = Vertex(random.randint(min_x_safe, min_x_safe + 5), random.randint(min_y_safe, min_y_safe + 5))
+        points.append(first)
+        for index in range(2):
+            new_vert = Vertex(random.randint(min_x_safe, min_x_safe + 5), random.randint(min_y_safe, min_y_safe + 5))
+            points.append(new_vert)
+            edges.append((last, new_vert))
+            last = new_vert
+        edges.append((first, last))
+        n -= 3
+        min_x_safe += 6
+        min_y_safe += 6
+
+    return points, edges
+
+
+
+def generate_obstacles(n, type):
+    """
+    Generates n^2 or nlogn obstacles mapping
+
+    keyword arguments:
+    n -- number of vertices
+    type -- time complexity wanted
+
+    returns a list of points and edges
+    """
+    if type == "quadratic":
+        return generate_quad(n)
+    elif type == "nlogn":
+        return generate_nlogn(n)
+
 def naive_visibility_graph(points, edges, start):
     """
     Creates a visibility graph by brute force in n^3 time
@@ -103,7 +206,7 @@ def dijkstras_alg(points, edges, start, end):
 
     # Sets constant time look up hash tables might not need it though the algorithm should discriminate
     # against revisiting since path cost is added together
-    # explored = set()
+    explored = set()
 
     for point in points:
         if point != start:
@@ -111,13 +214,13 @@ def dijkstras_alg(points, edges, start, end):
 
     while len(queue) > 0:
         curr = heapq.heappop(queue)
-        # explored.add(curr)
+        explored.add(curr)
         if curr == end:
             final_path = curr.path + [curr]
             return final_path
         else:
             for arc in curr.arcs:
-                if (curr.cost + curr.weights[arc]) < arc.cost: 
+                if (curr.cost + curr.weights[arc]) < arc.cost and arc not in explored: 
                     heapq.heappush(queue, arc)
                     arc.path = curr.path + [curr]
                     arc.cost = curr.cost + curr.weights[arc]
@@ -171,10 +274,11 @@ def main():
     """
     main function of the program
     """
-    points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
-    edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
-    start = Vertex(13, 2)
-    end = points[0]
+    # points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
+    # edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
+    points, edges = generate_obstacles(210, "nlogn")
+    start = Vertex(0, 0)
+    end = random.choice(points)
     naive_visibility_graph(points, edges, start)
     points.append(start)
     shortest_path = dijkstras_alg(points, edges, start, end)
