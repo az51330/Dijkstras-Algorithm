@@ -8,18 +8,24 @@
     query time to show O(nlogn + k) time, builds structure brute force since not testing that
 """
 
-import math
+import math, random, heapq
 import matplotlib.pyplot as plt
 from matplotlib import collections as mpl
 
 class Vertex:
     def __init__(self, x, y):
         self.loc = (x, y)
+        self.cost = 0
         # an arc is a connection of two visible vertices listed by self loc then connect loc
         self.arcs = []
+        self.weights = {}
+        self.path = []
 
     def __str__(self):
         return f"({self.loc[0]}, {self.loc[1]})"
+
+    def __lt__(self, other):
+        return self.cost < other.cost
 
 def euclidean_distance(point1, point2):
     """
@@ -77,9 +83,49 @@ def naive_visibility_graph(points, edges, start):
                             arc = False
                 if arc:
                     point.arcs.append(other)
+                    point.weights[other] = euclidean_distance(point.loc, other.loc)
     return start
 
-def test_arcs(points, edges, start):
+def dijkstras_alg(points, edges, start, end):
+    """
+    computes dijkstra's algorithm on a visibility graph to determine the shortest path from a start to end point
+
+    keyword arguments:
+    points -- a list of points in the visibility graph (points on obstacles)
+    edges -- all edges of obstacles
+    start -- the start vertex
+    end -- the end vertex
+
+    returns a list of the arcs of the shortest path from the start to end vertices
+    """
+    queue = [start]
+    heapq.heapify(queue)
+
+    # Sets constant time look up hash tables might not need it though the algorithm should discriminate
+    # against revisiting since path cost is added together
+    # explored = set()
+
+    for point in points:
+        if point != start:
+            point.cost = math.inf
+
+    while len(queue) > 0:
+        curr = heapq.heappop(queue)
+        # explored.add(curr)
+        if curr == end:
+            final_path = curr.path + [curr]
+            return final_path
+        else:
+            for arc in curr.arcs:
+                if (curr.cost + curr.weights[arc]) < arc.cost: 
+                    heapq.heappush(queue, arc)
+                    arc.path = curr.path + [curr]
+                    arc.cost = curr.cost + curr.weights[arc]
+    
+    return []
+
+
+def test_arcs(points, edges, path):
     """
     prints arcs of all points to check if the go through an obstacle
 
@@ -90,7 +136,6 @@ def test_arcs(points, edges, start):
     """
     # CITE: https://matplotlib.org/3.5.0/gallery/shapes_and_collections/line_collection.html
     # DESC: Never really used matplotlib too much so here is some line collection documentation that helped me set this up
-    points.append(start)
     lines = []
     colors = []
     for edge in edges:
@@ -112,6 +157,9 @@ def test_arcs(points, edges, start):
         for arc in point.arcs:
             lines.append([point.loc, arc.loc])
             colors.append((0, 1, 0, 1))
+    for index in range(len(path) - 1):
+        lines.append([path[index].loc, path[index + 1].loc])
+        colors.append((0, 0, 1, 1))
     graph = mpl.LineCollection(lines, colors=colors, linewidths=2)
     fig, ax = plt.subplots()
     ax.set_xlim(min_x - 1, max_x + 1)
@@ -125,8 +173,12 @@ def main():
     """
     points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
     edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
-    start = Vertex(0, 4)
+    start = Vertex(13, 2)
+    end = points[0]
     naive_visibility_graph(points, edges, start)
-    test_arcs(points, edges, start)
+    points.append(start)
+    shortest_path = dijkstras_alg(points, edges, start, end)
+    test_arcs(points, edges, shortest_path)
     
 main()
+
