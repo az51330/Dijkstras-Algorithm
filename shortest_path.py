@@ -14,20 +14,38 @@ from matplotlib import collections as mpl
 
 NUM_ITERATIONS = 3
 
-
 class Vertex:
     def __init__(self, x, y):
+        """
+        Initializer for vertex class
+
+        keyword arguments:
+        x -- the x value of the vertex
+        y -- the y value o the vertex
+        """
         self.loc = (x, y)
         self.cost = 0
         # an arc is a connection of two visible vertices listed by self loc then connect loc
         self.arcs = []
+        # weights are the euclidean distance from the vertex to a given arc
         self.weights = {}
+        # path is the shortest path found so far to this vertex from a start vertex
         self.path = []
 
     def __str__(self):
+        """
+        string method for printing ease of vertices
+
+        returns the tuple of the vertex in form (x, y)
+        """
         return f"({self.loc[0]}, {self.loc[1]})"
 
     def __lt__(self, other):
+        """
+        less than operator for vertices by cost of the vertex from the start node to be able to use heapq
+
+        returns boolean of the cost of itself and another vertex
+        """
         return self.cost < other.cost
 
 def euclidean_distance(point1, point2):
@@ -64,8 +82,11 @@ def generate_quad(n):
 
     returns a list of points and edges
     """
+    # variable initialization
     bottom = n // 2
     mid = bottom // 2
+    # the form of the generation is two very flat parabolas to maximize nodes that can see eachother
+    # and not sacrificing general position, does have rounding error ocassionally but are better than general position ones
     mid_bottom = Vertex(mid, -(1 / bottom) * mid * (mid - bottom))
     mid_top = Vertex(mid, (1 / bottom) * mid * (mid - bottom) + bottom)
     points = [mid_top, mid_bottom]
@@ -73,6 +94,7 @@ def generate_quad(n):
     last_bottom_right = last_bottom_left = points[0]
     last_top_right = last_top_left = points[1]
 
+    # this loop generates 4 points each interation expanding the lower and upper parabolas in both left and right directions
     for index in range(mid):
         new_bottom_right = Vertex(mid + index, -(1 / bottom) * (mid + index) * (mid + index - bottom))
         points.append(new_bottom_right)
@@ -94,8 +116,12 @@ def generate_quad(n):
         edges.append((last_top_left, new_top_left))
         last_top_left = new_top_left
 
+    # add an edge across the last points to close the shape
     edges.append((last_bottom_left, last_bottom_right))
     edges.append((last_top_left, last_top_right))
+
+    # all further appends are edges inside the shape to stop inner arcs from forming, does not add actual points, just are needed
+    # in this form to check for interestions properly
     edges.append((last_bottom_left, mid_bottom))
     edges.append((last_bottom_right, mid_bottom))
     edges.append((last_top_left, mid_top))
@@ -126,6 +152,8 @@ def generate_nlogn(n):
     edges = []
     min_x_safe = 0
     min_y_safe = 0
+
+    # generates triangles in a line so they do not overlap but intersect eachothers arcs to not have n^2 arcs
     while n > 0:
         first = last = Vertex(random.randint(min_x_safe, min_x_safe + 5), random.randint(min_y_safe, min_y_safe + 5))
         points.append(first)
@@ -140,8 +168,6 @@ def generate_nlogn(n):
         min_y_safe += 6
 
     return points, edges
-
-
 
 def generate_obstacles(n, type):
     """
@@ -177,8 +203,10 @@ def naive_visibility_graph(points, edges, start):
             arc = True
             if point != other:
                 for edge in edges:
+                    # check if the point pair is an edge
                     if edge == (point, other) or edge == (other, point):
                         arc = False
+                    # check if the point pair intersects an edge
                     if orient(edge[0].loc, edge[1].loc, point.loc) < 0 and orient(edge[0].loc, edge[1].loc, other.loc) > 0 and orient(point.loc, other.loc, edge[0].loc) < 0 and orient(point.loc, other.loc, edge[1].loc) > 0:
                             arc = False
                     elif orient(edge[0].loc, edge[1].loc, point.loc) > 0 and orient(edge[0].loc, edge[1].loc, other.loc) < 0 and orient(point.loc, other.loc, edge[0].loc) < 0 and orient(point.loc, other.loc, edge[1].loc) > 0:
@@ -204,13 +232,15 @@ def dijkstras_alg(points, edges, start, end):
 
     returns a list of the arcs of the shortest path from the start to end vertices
     """
+    # CITE: Myself and Josh Harmsen, AI Project 1 - Search
+    # DESC: Retooled our Dijkstra's algorithm for a cleaning robot for visibility graphs
     queue = [start]
     heapq.heapify(queue)
 
-    # Sets constant time look up hash tables might not need it though the algorithm should discriminate
-    # against revisiting since path cost is added together
+    # Set's constant time look up hash tables for marking explored vertices
     explored = set()
 
+    # set all points but the starts cost to infinity (start is 0) so unvisited vertices will always be assigned a new path and cost
     for point in points:
         if point != start:
             point.cost = math.inf
@@ -218,18 +248,19 @@ def dijkstras_alg(points, edges, start, end):
     while len(queue) > 0:
         curr = heapq.heappop(queue)
         explored.add(curr)
+        # if we found the end node, Dijkstra's algorithm guarantees it is the shortest path so return the path taken
         if curr == end:
             final_path = curr.path + [curr]
             return final_path
+        # otherwise add unexplored arcs with updated costs to the queue to continue searching
         else:
             for arc in curr.arcs:
                 if (curr.cost + curr.weights[arc]) < arc.cost and arc not in explored: 
                     heapq.heappush(queue, arc)
                     arc.path = curr.path + [curr]
                     arc.cost = curr.cost + curr.weights[arc]
-    
+    # if the queue ever is empty, there is no path connecting the start and end vertices
     return []
-
 
 def test_arcs(points, edges, path):
     """
@@ -244,6 +275,7 @@ def test_arcs(points, edges, path):
     # DESC: Never really used matplotlib too much so here is some line collection documentation that helped me set this up
     lines = []
     colors = []
+    # add all edges to the graph, edges are red
     for edge in edges:
         lines.append([edge[0].loc, edge[1].loc])
         colors.append((1, 0, 0, 1))
@@ -252,6 +284,7 @@ def test_arcs(points, edges, path):
     min_y = math.inf
     max_y = -math.inf
     for point in points:
+        # update max and mins to set borders
         if point.loc[0] < min_x:
             min_x = point.loc[0]
         if point.loc[0] > max_x:
@@ -260,18 +293,26 @@ def test_arcs(points, edges, path):
             min_y = point.loc[1]
         if point.loc[1] > max_y:
             max_y = point.loc[1]
+        # add every arc to lines to appear on graph, arcs are green
         for arc in point.arcs:
             lines.append([point.loc, arc.loc])
             colors.append((0, 1, 0, 1))
+    # add the shortest path to the graph, path is blue
     for index in range(len(path) - 1):
         lines.append([path[index].loc, path[index + 1].loc])
         colors.append((0, 0, 1, 1))
+    # make the plot and show it
     graph = mpl.LineCollection(lines, colors=colors, linewidths=2)
     fig, ax = plt.subplots()
     ax.set_xlim(min_x - 1, max_x + 1)
     ax.set_ylim(min_y - 1, max_y + 1)
     ax.add_collection(graph)
     plt.show()
+
+# ------------------------------------ Time Experiment ---------------------------------------------
+# CITE: Professor Strash Triangulate_timer.py as basis for my experiment
+# DESC: all functions below outside of main run the time experiment and format the output to test
+# the running time of Dijkstra's algorithm
 
 def average_time(algorithm, points, edges, alg_start, alg_end):
     """call algorithm on visibility graph repeatedly and return average time"""
@@ -358,6 +399,7 @@ def main():
     """
     main function of the program
     """
+    ### PRIOR TESTING
     # points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
     # edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
     # points, edges = generate_obstacles(20, "quadratic")
@@ -367,6 +409,7 @@ def main():
     # points.append(start)
     # shortest_path = dijkstras_alg(points, edges, start, end)
     # test_arcs(points, edges, shortest_path)
+    
     time_experiment()
 
 main()
