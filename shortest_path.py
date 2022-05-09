@@ -313,6 +313,10 @@ def test_arcs(points, edges, path):
 # CITE: Professor Strash Triangulate_timer.py as basis for my experiment
 # DESC: all functions below outside of main run the time experiment and format the output to test
 # the running time of Dijkstra's algorithm
+# IMPORTANT: This takes a really long time, brute force building of the visibility graph is n^3 time
+# and I could not find code for a faster algorithm which were all very difficult to implement.
+# If you want to run this it can get to n = 512 in 30ish minutes so I would not recommend that,
+# Experimental data has been collected to that point and is enough evidence to show the run times desired.
 
 def average_time(algorithm, points, edges, alg_start, alg_end):
     """call algorithm on visibility graph repeatedly and return average time"""
