@@ -8,9 +8,12 @@
     query time to show O(nlogn + k) time, builds structure brute force since not testing that
 """
 
-import math, random, heapq
+import math, random, heapq, datetime
 import matplotlib.pyplot as plt
 from matplotlib import collections as mpl
+
+NUM_ITERATIONS = 3
+
 
 class Vertex:
     def __init__(self, x, y):
@@ -270,19 +273,101 @@ def test_arcs(points, edges, path):
     ax.add_collection(graph)
     plt.show()
 
+def average_time(algorithm, points, edges, alg_start, alg_end):
+    """call algorithm on visibility graph repeatedly and return average time"""
+    time_diff = None
+
+    for iteration in range(0, NUM_ITERATIONS):
+        points_copy = points[:]
+        start = datetime.datetime.now()
+        algorithm(points_copy, edges, alg_start, alg_end)
+        end = datetime.datetime.now()
+        if time_diff == None:
+            time_diff = end - start
+        else:
+            time_diff = time_diff + end - start
+
+    time_ms = time_diff.microseconds // 1000
+    time_ms = time_ms + time_diff.seconds * 1000
+    time_ms = time_ms + time_diff.days * 24 * 60 * 60 * 1000
+
+    return time_ms
+
+def get_table_entry(num_vertices, item, option):
+    """get the appropriate table entry, which is either a number of vertices
+       or a running time"""
+    points, edges = generate_obstacles(num_vertices, option)
+    if option == "quadratic":
+        start = Vertex(num_vertices // 2 + 1, num_vertices // 2 - 1)
+    else:
+        start = Vertex(0, 0)
+    end = points[-1]
+    naive_visibility_graph(points, edges, start)
+    points.append(start)
+    if item == "n":
+        return num_vertices
+    else:
+        return average_time(dijkstras_alg, points, edges, start, end) 
+        
+
+def build_header_and_legend(option):
+    """construct the header entries, which are also used to fill table entries"""
+    # always print n (number of vertices) and running time of monotone algorithm
+    header = ["n", option]
+
+    print("Legend:")
+    print("  n           : the number of vertices in the polygon")
+    if option == "quadratic":
+        print("  quadratic   : the running time of dijkstra's algorithm on quadratic arcs (in ms)")
+    else:
+        print("  nlogn       : the running time of dijkstra's algorithm on nlogn arcs (in ms)")
+
+    print("")
+
+    return header
+
+def run_experiment(option):
+    """run the timing experiement according to the user-supplied option"""
+    header = build_header_and_legend(option)
+
+    for item in header:
+        print("{:>15} ".format(item), end="")
+    print("")
+
+    for i in range(2,35):
+        size = 2**i
+        for item in header:
+            print("{:>15} ".format(get_table_entry(size, item, option)), end="")
+        print("")
+
+def time_experiment():
+    """Get user input and run appropriate timing experiment."""
+    option = input("Which test would you like to run (quadratic, nlogn)? ")
+    while option not in ["quadratic", "nlogn"]:
+        print("Unrecognized option '", option, "'")
+        option = input("Which test would you like to run? (quadratic, nlogn)")
+
+    if option == "quadratic":
+        print("Running quadratic arcs experiment.")
+    else:
+        print("Running nlogn arcs experiement.")
+
+    run_experiment(option)
+
 def main():
     """
     main function of the program
     """
     # points = [Vertex(1,1), Vertex(2,2), Vertex(3,0), Vertex(4,5), Vertex(5,3), Vertex(6,9)]
     # edges = [(points[0], points[1]), (points[0], points[2]), (points[2], points[1]), (points[3], points[4]), (points[3], points[5]), (points[4], points[5])]
-    points, edges = generate_obstacles(210, "nlogn")
-    start = Vertex(0, 0)
-    end = random.choice(points)
-    naive_visibility_graph(points, edges, start)
-    points.append(start)
-    shortest_path = dijkstras_alg(points, edges, start, end)
-    test_arcs(points, edges, shortest_path)
-    
+    # points, edges = generate_obstacles(20, "quadratic")
+    # start = Vertex(11, 9)
+    # end = points[-1]
+    # naive_visibility_graph(points, edges, start)
+    # points.append(start)
+    # shortest_path = dijkstras_alg(points, edges, start, end)
+    # test_arcs(points, edges, shortest_path)
+    time_experiment()
+
 main()
 
