@@ -317,6 +317,7 @@ def test_arcs(points, edges, path):
 # and I could not find code for a faster algorithm which were all very difficult to implement.
 # If you want to run this it can get to n = 512 in 30ish minutes so I would not recommend that,
 # Experimental data has been collected to that point and is enough evidence to show the run times desired.
+# Can run to n = 256 easier, still may take a few minutes and the desired trends begin to show.
 
 def average_time(algorithm, points, edges, alg_start, alg_end):
     """call algorithm on visibility graph repeatedly and return average time"""
